@@ -115,7 +115,7 @@ contract TokenBase is ERC20, AccessControl  {
         require(!bots[from] && !bots[to]);
         //if tradeOpen
         if(!tradingOpen){
-            require(to==_publicSaleContract || to==_presaleContract, "not open");
+            require(to==_publicSaleContract || to==_presaleContract || from!=address(0) || to!=address(0), "not open");
         }
         //referral
         if((from==_presaleContract || from==_publicSaleContract) && to!=address(0)){ // when presale
