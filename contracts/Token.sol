@@ -24,7 +24,7 @@ contract TokenBase is ERC20, AccessControl  {
         ERC20(name, symbol) 
     {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _mint(msg.sender, totalSupply);
+        _mint(msg.sender, totalSupply.mul(10**18));
     }
     function setAddressExcludedFromTax(address[] memory addressesFrom, address[] memory addressesTo) onlyRole(DEFAULT_ADMIN_ROLE) public{
         uint8 i = 0;
