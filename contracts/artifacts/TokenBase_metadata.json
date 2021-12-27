@@ -1,6 +1,6 @@
 {
 	"compiler": {
-		"version": "0.8.7+commit.e28d00a7"
+		"version": "0.8.0+commit.c7dfd78e"
 	},
 	"language": "Solidity",
 	"output": {
@@ -201,6 +201,19 @@
 				"type": "function"
 			},
 			{
+				"inputs": [],
+				"name": "_buyTaxPercentage",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
 				"inputs": [
 					{
 						"internalType": "address",
@@ -291,6 +304,19 @@
 						"internalType": "address",
 						"name": "",
 						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "_sellTaxPercentage",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
 					}
 				],
 				"stateMutability": "view",
@@ -428,6 +454,19 @@
 						"type": "bool"
 					}
 				],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "notbot",
+						"type": "address"
+					}
+				],
+				"name": "delBot",
+				"outputs": [],
 				"stateMutability": "nonpayable",
 				"type": "function"
 			},
@@ -629,6 +668,19 @@
 			{
 				"inputs": [
 					{
+						"internalType": "address[]",
+						"name": "bots_",
+						"type": "address[]"
+					}
+				],
+				"name": "setBots",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
 						"internalType": "address",
 						"name": "marketingWallet",
 						"type": "address"
@@ -731,6 +783,24 @@
 						"type": "bool"
 					}
 				],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint8",
+						"name": "buyTaxPercentage",
+						"type": "uint8"
+					},
+					{
+						"internalType": "uint8",
+						"name": "sellTaxPercent",
+						"type": "uint8"
+					}
+				],
+				"name": "setTaxPercent",
+				"outputs": [],
 				"stateMutability": "nonpayable",
 				"type": "function"
 			},
@@ -898,9 +968,9 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"contracts/TokenBase.sol": "TokenBase"
+			"contracts/Token.sol": "TokenBase"
 		},
-		"evmVersion": "london",
+		"evmVersion": "istanbul",
 		"libraries": {},
 		"metadata": {
 			"bytecodeHash": "ipfs"
@@ -992,12 +1062,12 @@
 				"dweb:/ipfs/QmfYuZxRfx2J2xdk4EXN7jKg4bUYEMTaYk9BAw9Bqn4o2Y"
 			]
 		},
-		"contracts/TokenBase.sol": {
-			"keccak256": "0x92af49a03bf3610961eed84259416290944b88996b02b618625abaab5bb28ed5",
+		"contracts/Token.sol": {
+			"keccak256": "0x316f3b858f0801ceed1f56e2ea073a5e380b1ae001c5d1e1fe8a194a3c17af3e",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://88f47897afb8a4fde46088dc21b67c1fa3859e2a6a937162a3cf3ba0b5dadc86",
-				"dweb:/ipfs/QmNidxKrMtuiQXag84f2176FBwrWF7Yc2KBoa71nfvYWea"
+				"bzz-raw://dfe3334d585c84117f7ccc086b836430f443063b71979e7822b46cfa2fc9832e",
+				"dweb:/ipfs/QmVGkcGbxBgXWDcnaDGaYr6HhTGy4ScmCvjswC18HfY1Aq"
 			]
 		}
 	},

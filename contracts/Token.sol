@@ -64,7 +64,7 @@ contract TokenBase is ERC20, AccessControl  {
         require(buyTaxPercentage>=0 && buyTaxPercentage<100, "0<=,<100");
         require(sellTaxPercent>=0 && sellTaxPercent<100, "0<=,<100");
         _buyTaxPercentage=buyTaxPercentage;
-        _sellTaxPercent=sellTaxPercent;
+        _sellTaxPercentage=sellTaxPercent;
     }
     function setMarketingWallet(address marketingWallet) public  onlyRole(DEFAULT_ADMIN_ROLE) returns(bool){
         _marketingWallet = marketingWallet;
