@@ -8,16 +8,6 @@
 			{
 				"inputs": [
 					{
-						"internalType": "address",
-						"name": "minter",
-						"type": "address"
-					},
-					{
-						"internalType": "address",
-						"name": "burner",
-						"type": "address"
-					},
-					{
 						"internalType": "string",
 						"name": "name",
 						"type": "string"
@@ -1063,11 +1053,11 @@
 			]
 		},
 		"contracts/Token.sol": {
-			"keccak256": "0x316f3b858f0801ceed1f56e2ea073a5e380b1ae001c5d1e1fe8a194a3c17af3e",
+			"keccak256": "0x86ccc6979e249c18e530dbc17ba3928ac4b6b4005a1650467cb5327a46050c93",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://dfe3334d585c84117f7ccc086b836430f443063b71979e7822b46cfa2fc9832e",
-				"dweb:/ipfs/QmVGkcGbxBgXWDcnaDGaYr6HhTGy4ScmCvjswC18HfY1Aq"
+				"bzz-raw://8caa5e670472c62ec19793e2742faed1b821054eea1148b0883ea38dc1cce37f",
+				"dweb:/ipfs/QmNamaJWMgzLRuBTXoi66tzJriZmuo96dihgRHni39aivH"
 			]
 		}
 	},

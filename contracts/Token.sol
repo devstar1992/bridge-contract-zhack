@@ -20,11 +20,9 @@ contract TokenBase is ERC20, AccessControl  {
     uint256 public _buyTaxPercentage;
     uint256 public _sellTaxPercentage;
     mapping (address => bool) private bots;
-    constructor(address minter, address burner, string memory name, string memory symbol, uint256 totalSupply) 
+    constructor(string memory name, string memory symbol, uint256 totalSupply) 
         ERC20(name, symbol) 
     {
-        _setupRole(MINTER_ROLE, minter);
-        _setupRole(BURNER_ROLE, burner);
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _mint(msg.sender, totalSupply);
     }
