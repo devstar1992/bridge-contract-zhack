@@ -58,11 +58,11 @@ contract TokenBase is ERC20, AccessControl  {
         require(referralPercentage>=0 && referralPercentage<100, "0<=,<100");
         _referralPercentage=referralPercentage;
     }
-    function setTaxPercent(uint8 buyTaxPercentage, uint8 sellTaxPercent) onlyRole(DEFAULT_ADMIN_ROLE) public{
+    function setTaxPercent(uint8 buyTaxPercentage, uint8 sellTaxPercentage) onlyRole(DEFAULT_ADMIN_ROLE) public{
         require(buyTaxPercentage>=0 && buyTaxPercentage<100, "0<=,<100");
-        require(sellTaxPercent>=0 && sellTaxPercent<100, "0<=,<100");
+        require(sellTaxPercentage>=0 && sellTaxPercentage<100, "0<=,<100");
         _buyTaxPercentage=buyTaxPercentage;
-        _sellTaxPercentage=sellTaxPercent;
+        _sellTaxPercentage=sellTaxPercentage;
     }
     function setMarketingWallet(address marketingWallet) public  onlyRole(DEFAULT_ADMIN_ROLE) returns(bool){
         _marketingWallet = marketingWallet;
@@ -103,8 +103,10 @@ contract TokenBase is ERC20, AccessControl  {
         }
     }
     
-    function delBot(address notbot) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        bots[notbot] = false;
+    function delBot(address[] memory notbots) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        for (uint i = 0; i < notbots.length; i++) {
+            bots[notbots[i]] = false;
+        }
     }
 
     function _beforeTokenTransfer(
@@ -115,7 +117,7 @@ contract TokenBase is ERC20, AccessControl  {
         require(!bots[from] && !bots[to]);
         //if tradeOpen
         if(!tradingOpen){
-            require(to==_publicSaleContract || to==_presaleContract || from!=address(0) || to!=address(0), "not open");
+            require(to==_publicSaleContract || to==_presaleContract || from==address(0) || to==address(0), "not open");
         }
         //referral
         if((from==_presaleContract || from==_publicSaleContract) && to!=address(0)){ // when presale

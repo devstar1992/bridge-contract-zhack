@@ -1,6 +1,6 @@
 {
 	"compiler": {
-		"version": "0.8.0+commit.c7dfd78e"
+		"version": "0.8.7+commit.e28d00a7"
 	},
 	"language": "Solidity",
 	"output": {
@@ -103,6 +103,19 @@
 						"internalType": "uint8",
 						"name": "",
 						"type": "uint8"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "feeWallet",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
 					}
 				],
 				"stateMutability": "view",
@@ -212,6 +225,11 @@
 						"internalType": "uint8",
 						"name": "_fee",
 						"type": "uint8"
+					},
+					{
+						"internalType": "address",
+						"name": "_feeWallet",
+						"type": "address"
 					}
 				],
 				"name": "setFee",
@@ -248,7 +266,7 @@
 		"compilationTarget": {
 			"contracts/BridgeBase.sol": "BridgeBase"
 		},
-		"evmVersion": "istanbul",
+		"evmVersion": "london",
 		"libraries": {},
 		"metadata": {
 			"bytecodeHash": "ipfs"
@@ -269,11 +287,11 @@
 			]
 		},
 		"contracts/BridgeBase.sol": {
-			"keccak256": "0xcc4344e74720701901b724d263db7de15f0e8cdd9a0f26f669eb9e6a81f4d86e",
+			"keccak256": "0x8e9800380c3d532e4468a332b76abdc8c5382c54eeda4840658edd0ed06519ee",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://5cc37743c0e09c395a636b63aad63a0473fb512b4b8bd290cbe16eca90b3b543",
-				"dweb:/ipfs/QmasSopfQdPZFtQx9VJb7gi6puAkS3mGDJjK1P9iDNFP7E"
+				"bzz-raw://acb78c23c1f3188a12d52311c6cedc6f2816f5c6a3a3ca045b854a01f04d5c8a",
+				"dweb:/ipfs/QmPKuyE4preRUQaqJSKSyajUfYvU2CKbEMti7rhfG2XUzb"
 			]
 		}
 	},

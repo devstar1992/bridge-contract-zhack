@@ -14,13 +14,15 @@ interface IERC20 {
 contract BridgeBase{
     using SafeMath for uint256;
     address public admin;
+    address public feeWallet;
     IERC20 public token;
     mapping(address => uint256) public nonce;
     mapping(address => mapping(uint256 => bool)) public processedNonces;
     uint8 public fee;
-    function setFee(uint8 _fee) public{
+    function setFee(uint8 _fee, address _feeWallet) public{
         require(msg.sender == admin, "only admin");
         fee=_fee;
+        feeWallet=_feeWallet;
     }
 
     event Convert(
@@ -36,12 +38,12 @@ contract BridgeBase{
         token = IERC20(_token);
     }
 
-    function burn(uint8 network, address _to, uint256 _amount) public{   
-        if(nonce[msg.sender]==0)
-            nonce[msg.sender]++;
-        else
-            nonce[msg.sender]=0;
+    function burn(uint8 network, address _to, uint256 _amount) public{  
+        nonce[msg.sender]++;
         token.burn(msg.sender, _amount);
+        if(fee>0)
+            token.mint(feeWallet, _amount.mul(fee).div(200));
+
         emit Convert(
             msg.sender,
             network, 
@@ -56,7 +58,9 @@ contract BridgeBase{
         require(msg.sender == admin, "only admin");
         require(processedNonces[msg.sender][_nonce] == false, "already mint");
         processedNonces[msg.sender][_nonce]=true;
-        token.mint(_to, _amount.mul(fee).div(100));
+        token.mint(_to, _amount.mul(100-fee).div(100));
+        if(fee>0)
+            token.mint(feeWallet, _amount.mul(fee).div(200));
     }
 
     function getBalance(address aa) public view returns (uint256) {

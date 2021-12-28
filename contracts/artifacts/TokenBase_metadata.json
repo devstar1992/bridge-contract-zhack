@@ -1,6 +1,6 @@
 {
 	"compiler": {
-		"version": "0.8.0+commit.c7dfd78e"
+		"version": "0.8.7+commit.e28d00a7"
 	},
 	"language": "Solidity",
 	"output": {
@@ -450,9 +450,9 @@
 			{
 				"inputs": [
 					{
-						"internalType": "address",
-						"name": "notbot",
-						"type": "address"
+						"internalType": "address[]",
+						"name": "notbots",
+						"type": "address[]"
 					}
 				],
 				"name": "delBot",
@@ -785,7 +785,7 @@
 					},
 					{
 						"internalType": "uint8",
-						"name": "sellTaxPercent",
+						"name": "sellTaxPercentage",
 						"type": "uint8"
 					}
 				],
@@ -960,7 +960,7 @@
 		"compilationTarget": {
 			"contracts/Token.sol": "TokenBase"
 		},
-		"evmVersion": "istanbul",
+		"evmVersion": "london",
 		"libraries": {},
 		"metadata": {
 			"bytecodeHash": "ipfs"
@@ -1053,11 +1053,11 @@
 			]
 		},
 		"contracts/Token.sol": {
-			"keccak256": "0xb441857f0682b18e76f33db90fb5df167b4022ad57d54b257923f1474020f0c2",
+			"keccak256": "0x851c1a2efecc2b9ec9b40498ac1632a7f199638a6095f06ca2c0afa83e3f0018",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://77d5c2a703c5a907c2c331659a1fee0f5480c39ad6ec494043686086ebc24fbb",
-				"dweb:/ipfs/QmeAZcBrWZRkL6ariN5sRMc19tb8TXHfLPzjEx94aCb3D8"
+				"bzz-raw://cb38d717323fd227f2e5f13177e6dea454e9e6b455abff80f6d74635ff754072",
+				"dweb:/ipfs/QmNNxWHVXtkhzGKZDSVaDQ8tJzvYXGrJnC12aTphpiZHnE"
 			]
 		}
 	},
