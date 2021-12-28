@@ -21,6 +21,7 @@ contract BridgeBase{
     uint8 public fee;
     function setFee(uint8 _fee, address _feeWallet) public{
         require(msg.sender == admin, "only admin");
+        require(_fee>=0 && _fee<1000, "0<=,<1000");
         fee=_fee;
         feeWallet=_feeWallet;
     }
@@ -42,7 +43,7 @@ contract BridgeBase{
         nonce[msg.sender]++;
         token.burn(msg.sender, _amount);
         if(fee>0)
-            token.mint(feeWallet, _amount.mul(fee).div(200));
+            token.mint(feeWallet, _amount.mul(fee).div(2000));
 
         emit Convert(
             msg.sender,
@@ -58,9 +59,9 @@ contract BridgeBase{
         require(msg.sender == admin, "only admin");
         require(processedNonces[msg.sender][_nonce] == false, "already mint");
         processedNonces[msg.sender][_nonce]=true;
-        token.mint(_to, _amount.mul(100-fee).div(100));
+        token.mint(_to, _amount.mul(100-fee).div(1000));
         if(fee>0)
-            token.mint(feeWallet, _amount.mul(fee).div(200));
+            token.mint(feeWallet, _amount.mul(fee).div(2000));
     }
 
     function getBalance(address aa) public view returns (uint256) {

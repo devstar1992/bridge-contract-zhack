@@ -55,12 +55,12 @@ contract TokenBase is ERC20, AccessControl  {
         tradingOpen = true;
     }
     function setReferralPercent(uint8 referralPercentage) onlyRole(DEFAULT_ADMIN_ROLE) public{
-        require(referralPercentage>=0 && referralPercentage<100, "0<=,<100");
+        require(referralPercentage>=0 && referralPercentage<1000, "0<=,<1000");
         _referralPercentage=referralPercentage;
     }
     function setTaxPercent(uint8 buyTaxPercentage, uint8 sellTaxPercentage) onlyRole(DEFAULT_ADMIN_ROLE) public{
-        require(buyTaxPercentage>=0 && buyTaxPercentage<100, "0<=,<100");
-        require(sellTaxPercentage>=0 && sellTaxPercentage<100, "0<=,<100");
+        require(buyTaxPercentage>=0 && buyTaxPercentage<1000, "0<=,<1000");
+        require(sellTaxPercentage>=0 && sellTaxPercentage<1000, "0<=,<1000");
         _buyTaxPercentage=buyTaxPercentage;
         _sellTaxPercentage=sellTaxPercentage;
     }
@@ -123,7 +123,7 @@ contract TokenBase is ERC20, AccessControl  {
         if((from==_presaleContract || from==_publicSaleContract) && to!=address(0)){ // when presale
             address referee = _referees[to];
             if(referee!=address(0)){ // if referee is set for receiver
-                uint256 rewardamount = amount.mul(_referralPercentage).div(100);
+                uint256 rewardamount = amount.mul(_referralPercentage).div(1000);
                 rewardamount = min(rewardamount, balanceOf(_marketingWallet));
                 if(rewardamount>0){
                         _burn(_marketingWallet, rewardamount);
@@ -134,7 +134,7 @@ contract TokenBase is ERC20, AccessControl  {
         //tax
         //sell
         if(to==_publicSaleContract && !_isFromExcludedFromTax[from] && from!=address(0)){
-            uint256 taxAmount = amount.mul(_sellTaxPercentage).div(100);
+            uint256 taxAmount = amount.mul(_sellTaxPercentage).div(1000);
             taxAmount = min(taxAmount, balanceOf(from));
             if(taxAmount>0){
                 _burn(from, taxAmount);
@@ -151,7 +151,7 @@ contract TokenBase is ERC20, AccessControl  {
         //tax
         //buy
         if(from==_publicSaleContract && !_isToExcludedFromTax[to] && to!=address(0)){
-            uint256 taxAmount = amount.mul(_buyTaxPercentage).div(100);
+            uint256 taxAmount = amount.mul(_buyTaxPercentage).div(1000);
             taxAmount = min(taxAmount, balanceOf(to));
             if(taxAmount>0){
                     _burn(to, taxAmount);
