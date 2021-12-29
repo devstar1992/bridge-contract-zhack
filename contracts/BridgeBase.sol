@@ -1,21 +1,17 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "./Token.sol";
 
-interface IERC20 {
-    function transfer(address _to, uint256 _value) external returns (bool);
-    function transferFrom(address _from, address _to, uint256 _value) external returns (bool);
-    function balanceOf(address whom) external view returns (uint256);
-    function mint(address to, uint256 amount) external;
-    function burn(address owner, uint256 amount) external;
-}
 
-contract BridgeBase{
-    using SafeMath for uint256;
+
+contract BridgeBase is Initializable {
+    using SafeMathUpgradeable for uint256;
     address public admin;
     address public feeWallet;
-    IERC20 public token;
+    Token public token;
     mapping(address => uint256) public nonce;
     mapping(address => mapping(uint256 => bool)) public processedNonces;
     uint8 public fee;
@@ -34,11 +30,11 @@ contract BridgeBase{
         uint256 date,
         uint256 nonce
     );
-    constructor(address _token) {
-        admin = msg.sender;
-        token = IERC20(_token);
-    }
 
+    function initialize(address _admin, address _token) public initializer {
+        admin = _admin;
+        token = Token(_token);
+    }
     function burn(uint8 network, address _to, uint256 _amount) public{  
         nonce[msg.sender]++;
         token.burn(msg.sender, _amount);

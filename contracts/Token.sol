@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
-contract TokenBase is ERC20, AccessControl  {
-    using SafeMath for uint256;
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+
+contract Token is ERC20Upgradeable, AccessControlUpgradeable  {
+    using SafeMathUpgradeable for uint256;
 
     address public _marketingWallet;
     address public _presaleContract;
     address public _publicSaleContract;
     address payable public _taxAddrWallet;
     mapping(address => address) public _referees;
-    uint256 _referralPercentage = 3; // referee get 3% of transfer amount
+    uint256 _referralPercentage; // referee get 3% of transfer amount
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
     bool private tradingOpen;
@@ -20,12 +21,15 @@ contract TokenBase is ERC20, AccessControl  {
     uint256 public _buyTaxPercentage;
     uint256 public _sellTaxPercentage;
     mapping (address => bool) private bots;
-    constructor(string memory name, string memory symbol, uint256 totalSupply) 
-        ERC20(name, symbol) 
-    {
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _mint(msg.sender, totalSupply.mul(10**18));
+
+    function initialize(
+        address admin
+    ) public initializer {
+        __ERC20_init("Test Token", "TTK");
+        _setupRole(DEFAULT_ADMIN_ROLE, admin);
+        _mint(admin, 100000000000000000000000000);
     }
+
     function setAddressExcludedFromTax(address[] memory addressesFrom, address[] memory addressesTo) onlyRole(DEFAULT_ADMIN_ROLE) public{
         uint8 i = 0;
         while(i < addressesFrom.length) {
