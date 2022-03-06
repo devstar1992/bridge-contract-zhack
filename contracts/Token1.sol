@@ -15,7 +15,6 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
     address public presaleContract;
     address public publicSaleContract;
     address public lpWallet;
-    address public communityWallet;
     // mapping(address => address) public _referees;
     uint256 referralPercentage; // referee get 3% of transfer amount
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
@@ -23,16 +22,15 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
     bool private tradingOpen;
     mapping (address => bool) public isExcludedFromTax;
     uint16 public lpTaxPercentage;
-    uint16 public communityTaxPercentage;
     uint16 public marketingTaxPercentage;
     mapping (address => bool) private _bots;
 
     event LogOpenTrading(bool open); 
     event LogUpdateReferralPercentage(uint256 old_val, uint256 new_val); 
-    event LogUpdateTaxPercentage(uint256 old_lp_tax, uint256 old_community_tax, uint256 old_marketing_tax, uint256 new_lp_tax, uint256 new_community_tax, uint256 new_marketing_tax); 
+    event LogUpdateTaxPercentage(uint256 old_lp_tax, uint256 old_marketing_tax, uint256 new_lp_tax, uint256 new_marketing_tax); 
     event LogExcludedFromTax(address[] addresses);    
     event LogIncludeFromTax(address[] addresses);    
-    event LogUpdateFeeWallets(address old_lp, address old_community, address old_marketing, address lpWallet, address communityWallet, address marketingWallet);
+    event LogUpdateFeeWallets(address old_lp, address old_marketing, address lpWallet, address marketingWallet);
     event LogUpdatePresaleContract(address old_presaleContract, address presaleContract);
     event LogUpdatePublicContract(address old_publicContract, address publicSaleContract);
     event Mint(address _to, uint256 _amount);
@@ -46,10 +44,8 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
         uint256 initial_supply,
         address _marketingWallet,
         address _lpWallet,
-        address _communityWallet,
         address router,
         uint16 _lpTaxPercentage,
-        uint16 _communityTaxPercentage,
         uint16 _marketingTaxPercentage
     ) public initializer {
         __ERC20_init(name, symbol);
@@ -58,10 +54,8 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
         _mint(admin, initial_supply);
         marketingWallet=_marketingWallet;
         lpWallet= _lpWallet;
-        communityWallet= _communityWallet;
         _router=router;
         lpTaxPercentage=_lpTaxPercentage;
-        communityTaxPercentage=_communityTaxPercentage;
         marketingTaxPercentage=_marketingTaxPercentage;
     }
 
@@ -114,30 +108,24 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
         referralPercentage=_referralPercentage;
         emit LogUpdateReferralPercentage(oldReferral, _referralPercentage);
     }
-    function setTaxPercent(uint16 _lpTaxPercentage, uint16 _communityTaxPercentage, uint16 _marketingTaxPercentage) onlyRole(DEFAULT_ADMIN_ROLE) public{
+    function setTaxPercent(uint16 _lpTaxPercentage, uint16 _marketingTaxPercentage) onlyRole(DEFAULT_ADMIN_ROLE) public{
         require(_lpTaxPercentage>=0 && _lpTaxPercentage<1000);
-        require(_communityTaxPercentage>=0 && _communityTaxPercentage<1000);
         require(_marketingTaxPercentage>=0 && _marketingTaxPercentage<1000);
-        require(_lpTaxPercentage+_communityTaxPercentage+_marketingTaxPercentage<1000);
+        require(_lpTaxPercentage+_marketingTaxPercentage<1000);
         uint256 old_lp=lpTaxPercentage;
-        uint256 old_community=communityTaxPercentage;
         uint256 old_marketing=marketingTaxPercentage;
         lpTaxPercentage=_lpTaxPercentage;
-        communityTaxPercentage=_communityTaxPercentage;
         marketingTaxPercentage=_marketingTaxPercentage;
-        emit LogUpdateTaxPercentage(old_lp, old_community, old_marketing, lpTaxPercentage, communityTaxPercentage, marketingTaxPercentage);
+        emit LogUpdateTaxPercentage(old_lp, old_marketing, lpTaxPercentage, marketingTaxPercentage);
     }
-    function setWallets(address _marketingWallet, address _lpWallet, address _communityWallet) public  onlyRole(DEFAULT_ADMIN_ROLE) returns(bool){
+    function setWallets(address _marketingWallet, address _lpWallet) public  onlyRole(DEFAULT_ADMIN_ROLE) returns(bool){
         require(_marketingWallet != address(0), "_marketingWallet can not be 0 address");
         require(_lpWallet != address(0), "_lpWallet can not be 0 address");
-        require(_communityWallet != address(0), "_communityWallet can not be 0 address");
         address old_marketing=marketingWallet;
         address old_lp=lpWallet;
-        address old_community=communityWallet;
         marketingWallet = _marketingWallet;
         lpWallet= _lpWallet;
-        communityWallet=_communityWallet;
-        emit LogUpdateFeeWallets(old_lp, old_community, old_marketing, lpWallet, communityWallet, marketingWallet);
+        emit LogUpdateFeeWallets(old_lp, old_marketing, lpWallet, marketingWallet);
         return true;
     }
 
@@ -196,7 +184,6 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
         uint256 amount
     ) internal virtual override {
         uint256 lpTaxAmount = amount.mul(lpTaxPercentage).div(1000);
-        uint256 communityTaxAmount=amount.mul(communityTaxPercentage).div(1000);
         uint256 marketingTaxAmount=amount.mul(marketingTaxPercentage).div(1000);
 
         require(!_bots[from] && !_bots[to]);
@@ -207,7 +194,6 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
         (from==publicSaleContract && !isExcludedFromTax[to])){                
             
             _mint(lpWallet, lpTaxAmount);
-            _mint(communityWallet, communityTaxAmount);
             address[] memory tmp = new address[](2);
             IPancakeRouter02 pancakeRouter=IPancakeRouter02(_router);
             tmp[0] = address(this);
@@ -222,11 +208,11 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
             );            
         }
 
-        super._transfer(from, to, amount.sub(lpTaxAmount).sub(communityTaxAmount).sub(marketingTaxAmount));
+        super._transfer(from, to, amount.sub(lpTaxAmount).sub(marketingTaxAmount));
 
         if((to==publicSaleContract && !isExcludedFromTax[from]) ||
             (from==publicSaleContract && !isExcludedFromTax[to])){                
-            _burn(to, lpTaxAmount.add(communityTaxAmount).add(marketingTaxAmount));                    
+            _burn(to, lpTaxAmount.add(marketingTaxAmount));                    
         }
         
     }
