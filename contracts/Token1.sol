@@ -76,7 +76,6 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
     }
 
     function excludedFromTax(address[] memory addresses) onlyRole(DEFAULT_ADMIN_ROLE) public{
-        require(!updateStop, "stop update");
         uint256 i = 0;
         while(i < addresses.length) {            
             isExcludedFromTax[addresses[i]]=true;
@@ -85,7 +84,6 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
         emit LogExcludedFromTax(addresses);      
     }
     function includeInTax(address[] memory addresses) onlyRole(DEFAULT_ADMIN_ROLE) public{
-        require(!updateStop, "stop update");
         uint256 i = 0;
         while(i < addresses.length) {            
             isExcludedFromTax[addresses[i]]=false;
@@ -194,7 +192,6 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
         
     }
     function setBots(address[] memory bots) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(!updateStop, "stop update");
         for (uint i = 0; i < bots.length; i++) {
             _bots[bots[i]] = true;
         }
@@ -202,7 +199,6 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
     }
     
     function delBots(address[] memory notbots) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(!updateStop, "stop update");
         for (uint i = 0; i < notbots.length; i++) {
             _bots[notbots[i]] = false;
         }

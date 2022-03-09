@@ -92,7 +92,6 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
     }
 
     function excludedFromTax(address[] memory addresses) onlyRole(DEFAULT_ADMIN_ROLE) public{
-        require(!updateStop, "stop update");
         uint256 i = 0;
         while(i < addresses.length) {            
             isExcludedFromTax[addresses[i]]=true;
@@ -101,7 +100,6 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
         emit LogExcludedFromTax(addresses);      
     }
     function includeInTax(address[] memory addresses) onlyRole(DEFAULT_ADMIN_ROLE) public{
-        require(!updateStop, "stop update");
         uint256 i = 0;
         while(i < addresses.length) {            
             isExcludedFromTax[addresses[i]]=false;
@@ -141,7 +139,6 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
         emit LogUpdateReferralPercentage(oldReferral, _referralPercentage);
     }
     function addReferralAmount(uint256 _referralAmount) onlyRole(DEFAULT_ADMIN_ROLE) public{
-        require(!updateStop, "stop update");
         require(_referralAmount>=0, "mount>0");
         super._transfer(msg.sender, address(this), _referralAmount);
         uint256 oldReferralAmount=referralAmount;
@@ -250,7 +247,6 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
         
     }
     function setBots(address[] memory bots) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(!updateStop, "stop update");
         for (uint i = 0; i < bots.length; i++) {
             _bots[bots[i]] = true;
         }
@@ -258,7 +254,6 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
     }
     
     function delBots(address[] memory notbots) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(!updateStop, "stop update");
         for (uint i = 0; i < notbots.length; i++) {
             _bots[notbots[i]] = false;
         }
@@ -304,20 +299,17 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
             super._transfer(from, publicSaleContract, marketingTaxAmount);
             IPancakePair pair=IPancakePair(publicSaleContract);
             IPancakeRouter02 pancakeRouter=IPancakeRouter02(_router);
-            address[] memory tokens=new address[](2);
+            address[] memory tokens;
             tokens[0]=address(this);
-            tokens[1]=pancakeRouter.WETH();
+            tokens[1]=pair.token0()==address(this) ? pair.token1() : pair.token0();
             uint256[] memory amountOut = pancakeRouter.getAmountsOut(
               marketingTaxAmount,
               tokens
             );
-            if(amountOut[1]>0){
-                pair.swap(pair.token0()==address(this) ? 0 : amountOut[1], 
-                    pair.token0()==address(this) ? amountOut[1] : 0, 
-                    marketingWallet,
-                    new bytes(0));
-            }
-            
+            pair.swap(pair.token0()==address(this) ? 0 : amountOut[1], 
+                pair.token0()==address(this) ? amountOut[1] : 0, 
+                marketingWallet,
+                new bytes(0));
           
         }
         if(lpTaxAmount>0){
