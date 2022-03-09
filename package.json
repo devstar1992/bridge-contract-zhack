@@ -11,5 +11,9 @@
     "ethers": "^5.5.2",
     "hardhat": "^2.8.0"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "scripts": {
+    "deployToken": "npx hardhat run --network bsc_testnet scripts/deploy_upgradeable_token.js",  
+    "upgradeToken": "npx hardhat run --network bsc_testnet scripts/upgrade_token.js"
+  }
 }

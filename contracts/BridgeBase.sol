@@ -37,7 +37,7 @@ contract BridgeBase is Initializable {
         require(_token != address(0), "_token can not be 0 address");
 
         admin = _admin;
-        token = Token(_token);
+        token = Token(payable(_token));
     }
     function burn(uint8 network, address _to, uint256 _amount) public{  
         nonce[msg.sender]++;

@@ -14,57 +14,70 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
     address public marketingWallet;
     address public presaleContract;
     address public publicSaleContract;
-    address public lpWallet;
-    // mapping(address => address) public _referees;
-    uint256 referralPercentage; // referee get 3% of transfer amount
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
-    bool private tradingOpen;
+    bool public tradingOpen;
     mapping (address => bool) public isExcludedFromTax;
-    uint16 public lpTaxPercentage;
-    uint16 public marketingTaxPercentage;
-    mapping (address => bool) private _bots;
+    uint256[3] public lpTaxPercentage;
+    uint256[3] public marketingTaxPercentage;
+    mapping (address => bool) public _bots;
+    bool public updateStop;
+    address[] public holders;
 
     event LogOpenTrading(bool open); 
-    event LogUpdateReferralPercentage(uint256 old_val, uint256 new_val); 
-    event LogUpdateTaxPercentage(uint256 old_lp_tax, uint256 old_marketing_tax, uint256 new_lp_tax, uint256 new_marketing_tax); 
+    event LogUpdateTaxPercentage(
+            uint256[3] _old_lpTaxPercentage, 
+            uint256[3] _old_marketingTaxPercentage,
+            uint256[3] _lpTaxPercentage,
+            uint256[3] _marketingTaxPercentage
+        );
     event LogExcludedFromTax(address[] addresses);    
     event LogIncludeFromTax(address[] addresses);    
-    event LogUpdateFeeWallets(address old_lp, address old_marketing, address lpWallet, address marketingWallet);
+    event LogUpdateFeeWallets(address old_marketing, address marketingWallet);
     event LogUpdatePresaleContract(address old_presaleContract, address presaleContract);
-    event LogUpdatePublicContract(address old_publicContract, address publicSaleContract);
+    event LogUpdatePublicSaleContract(address old_publicContract, address publicSaleContract);
     event Mint(address _to, uint256 _amount);
     event Burn(address _owner, uint256 _amount);
     event LogSetBots(address[] bots);
     event LogDelBots(address[] notbots);
+    event LogUpdateStopped(bool _updateStop);
+    event LogAddHoler(address _holder);
+    event LogRemoveHoler(address _holder);
+    event LogRedistribute(uint256 _amount);
     function initialize(
         address admin,
         string memory name,
         string memory symbol,
         uint256 initial_supply,
         address _marketingWallet,
-        address _lpWallet,
         address router,
-        uint16 _lpTaxPercentage,
-        uint16 _marketingTaxPercentage
+        uint256[3] memory _lpTaxPercentage,
+        uint256[3] memory _marketingTaxPercentage
     ) public initializer {
         __ERC20_init(name, symbol);
         __AccessControl_init();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
         _mint(admin, initial_supply);
         marketingWallet=_marketingWallet;
-        lpWallet= _lpWallet;
         _router=router;
         lpTaxPercentage=_lpTaxPercentage;
         marketingTaxPercentage=_marketingTaxPercentage;
+        updateStop=false;
     }
 
     function decimals() public view virtual override returns (uint8) {
         return 9;
     }
 
+    function stopUpdate() onlyRole(DEFAULT_ADMIN_ROLE) public{
+        require(updateStop==false, "stopped!");
+        updateStop=true;
+        emit LogUpdateStopped(true);
+    }
+
     function excludedFromTax(address[] memory addresses) onlyRole(DEFAULT_ADMIN_ROLE) public{
-        uint8 i = 0;
+        require(!updateStop, "stop update");
+        uint256 i = 0;
         while(i < addresses.length) {            
             isExcludedFromTax[addresses[i]]=true;
             i++;
@@ -72,7 +85,8 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
         emit LogExcludedFromTax(addresses);      
     }
     function includeInTax(address[] memory addresses) onlyRole(DEFAULT_ADMIN_ROLE) public{
-        uint8 i = 0;
+        require(!updateStop, "stop update");
+        uint256 i = 0;
         while(i < addresses.length) {            
             isExcludedFromTax[addresses[i]]=false;
             i++;
@@ -87,50 +101,61 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
         // create pair
         address lpPair = IPancakeFactory(dexRouter.factory()).createPair(address(this), dexRouter.WETH());
         publicSaleContract=lpPair;
-   
+        uint256 _amount=balanceOf(address(this));
         // add the liquidity
         require(address(this).balance > 0, "Must have ETH on contract to launch");
-        require(balanceOf(address(this)) > 0, "Must have Tokens on contract to launch");
-        _approve(address(this), address(dexRouter), balanceOf(address(this)));
+        require(_amount > 0, "Must have Tokens on contract to launch");
+        _approve(address(this), address(dexRouter), _amount);
         dexRouter.addLiquidityETH{value: address(this).balance}(
             address(this),
-            balanceOf(address(this)),
+            _amount,
             0, // slippage is unavoidable
             0, // slippage is unavoidable
-            lpWallet,
+            msg.sender,
             block.timestamp
         );
         emit LogOpenTrading(true);
     }
-    function setReferralPercent(uint8 _referralPercentage) onlyRole(DEFAULT_ADMIN_ROLE) public{
-        require(_referralPercentage>=0 && _referralPercentage<1000, "0<=,<1000");
-        uint256 oldReferral=referralPercentage;
-        referralPercentage=_referralPercentage;
-        emit LogUpdateReferralPercentage(oldReferral, _referralPercentage);
-    }
-    function setTaxPercent(uint16 _lpTaxPercentage, uint16 _marketingTaxPercentage) onlyRole(DEFAULT_ADMIN_ROLE) public{
-        require(_lpTaxPercentage>=0 && _lpTaxPercentage<1000);
-        require(_marketingTaxPercentage>=0 && _marketingTaxPercentage<1000);
-        require(_lpTaxPercentage+_marketingTaxPercentage<1000);
-        uint256 old_lp=lpTaxPercentage;
-        uint256 old_marketing=marketingTaxPercentage;
+
+
+    function setTaxPercent(
+        uint256[3] memory _lpTaxPercentage,
+        uint256[3] memory _marketingTaxPercentage
+    ) onlyRole(DEFAULT_ADMIN_ROLE) public{
+        require(!updateStop, "stop update");
+        require(_lpTaxPercentage[0]>=0 && _lpTaxPercentage[0]<1000);
+        require(_lpTaxPercentage[1]>=0 && _lpTaxPercentage[1]<1000);
+        require(_lpTaxPercentage[2]>=0 && _lpTaxPercentage[2]<1000);       
+        require(_marketingTaxPercentage[0]>=0 && _marketingTaxPercentage[0]<1000);
+        require(_marketingTaxPercentage[1]>=0 && _marketingTaxPercentage[1]<1000);
+        require(_marketingTaxPercentage[2]>=0 && _marketingTaxPercentage[2]<1000);
+        require(_lpTaxPercentage[0]+_marketingTaxPercentage[0]<1000);
+        require(_lpTaxPercentage[1]+_marketingTaxPercentage[1]<1000);
+        require(_lpTaxPercentage[2]+_marketingTaxPercentage[2]<1000);
+        uint256[3] memory old_lpTaxPercentage=lpTaxPercentage;
+        uint256[3] memory old_marketingTaxPercentage=marketingTaxPercentage;
+
         lpTaxPercentage=_lpTaxPercentage;
         marketingTaxPercentage=_marketingTaxPercentage;
-        emit LogUpdateTaxPercentage(old_lp, old_marketing, lpTaxPercentage, marketingTaxPercentage);
+        emit LogUpdateTaxPercentage(
+            old_lpTaxPercentage, 
+            old_marketingTaxPercentage,
+            lpTaxPercentage,
+            marketingTaxPercentage
+        );
     }
-    function setWallets(address _marketingWallet, address _lpWallet) public  onlyRole(DEFAULT_ADMIN_ROLE) returns(bool){
+    function setWallets(address _marketingWallet) public  onlyRole(DEFAULT_ADMIN_ROLE) returns(bool){
+        require(!updateStop, "stop update");
         require(_marketingWallet != address(0), "_marketingWallet can not be 0 address");
-        require(_lpWallet != address(0), "_lpWallet can not be 0 address");
         address old_marketing=marketingWallet;
-        address old_lp=lpWallet;
         marketingWallet = _marketingWallet;
-        lpWallet= _lpWallet;
-        emit LogUpdateFeeWallets(old_lp, old_marketing, lpWallet, marketingWallet);
+        emit LogUpdateFeeWallets(old_marketing, marketingWallet);
         return true;
     }
 
 
     function setPresaleContract(address _presaleContract) onlyRole(DEFAULT_ADMIN_ROLE) public returns(bool){
+        require(!updateStop, "stop update");
         require(_presaleContract != address(0), "_presaleContract can not be 0 address");
         address old_presaleContract=presaleContract;
         presaleContract = _presaleContract;
@@ -138,33 +163,38 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
         return true;
     }
     function setPublicSaleContract(address _publicSaleContract) onlyRole(DEFAULT_ADMIN_ROLE) public returns(bool){
+        require(!updateStop, "stop update");
         require(_publicSaleContract != address(0), "_publicSaleContract can not be 0 address");
         address old_publicContract=publicSaleContract;
         publicSaleContract = _publicSaleContract;
-        emit LogUpdatePublicContract(old_publicContract, publicSaleContract);
+        emit LogUpdatePublicSaleContract(old_publicContract, publicSaleContract);
         return true;
     }
-
-    // function setReferee(address referee) public returns(bool){
-    //     require(msg.sender != referee, "can not be self");
-    //     _referees[msg.sender] = referee;
-    //     return true;
-    // }
-
 
 
     function mint(address _to, uint256 _amount) external onlyRole(MINTER_ROLE){
         require(_to != address(0), "_to can not be 0 address");
-        _mint(_to, _amount);
-        emit Mint(_to, _amount);
+        if(_amount>0)
+        {
+            _addHolder(_to);
+            _mint(_to, _amount);
+            emit Mint(_to, _amount);
+        }
+        
     }
 
     function burn(address _owner, uint256 _amount) external onlyRole(BURNER_ROLE) {
         require(_owner != address(0), "_owner can not be 0 address");
-        _burn(_owner, _amount);
-        emit Burn(_owner, _amount);
+        if(_amount>0)
+        {
+            _burn(_owner, _amount);
+            _removeHolder(_owner);
+            emit Burn(_owner, _amount);
+        }
+        
     }
     function setBots(address[] memory bots) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(!updateStop, "stop update");
         for (uint i = 0; i < bots.length; i++) {
             _bots[bots[i]] = true;
         }
@@ -172,6 +202,7 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
     }
     
     function delBots(address[] memory notbots) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(!updateStop, "stop update");
         for (uint i = 0; i < notbots.length; i++) {
             _bots[notbots[i]] = false;
         }
@@ -183,42 +214,80 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
         address to,
         uint256 amount
     ) internal virtual override {
-        uint256 lpTaxAmount = amount.mul(lpTaxPercentage).div(1000);
-        uint256 marketingTaxAmount=amount.mul(marketingTaxPercentage).div(1000);
-
         require(!_bots[from] && !_bots[to]);
         if(!tradingOpen){
-            require(to==publicSaleContract || to==presaleContract, "not open");
-        }
-        if((to==publicSaleContract && !isExcludedFromTax[from]) ||
-        (from==publicSaleContract && !isExcludedFromTax[to])){                
-            
-            _mint(lpWallet, lpTaxAmount);
-            address[] memory tmp = new address[](2);
-            IPancakeRouter02 pancakeRouter=IPancakeRouter02(_router);
-            tmp[0] = address(this);
-            tmp[1] = pancakeRouter.WETH();
-            
-            pancakeRouter.swapExactTokensForETHSupportingFeeOnTransferTokens(
-                marketingTaxAmount,
-                0,
-                tmp,
-                    marketingWallet,
-                block.timestamp + 3600
-            );            
+            require(to==publicSaleContract || to==presaleContract || to==address(this) || from==address(this), "not open");
         }
 
-        super._transfer(from, to, amount.sub(lpTaxAmount).sub(marketingTaxAmount));
-
-        if((to==publicSaleContract && !isExcludedFromTax[from]) ||
-            (from==publicSaleContract && !isExcludedFromTax[to])){                
-            _burn(to, lpTaxAmount.add(marketingTaxAmount));                    
+        uint256 lpTaxAmount=0;
+        uint256 marketingTaxAmount=0;
+        if(to==publicSaleContract && !isExcludedFromTax[from] && from!=address(this)){
+            //sell
+            lpTaxAmount = amount.mul(lpTaxPercentage[0]).div(1000);
+            marketingTaxAmount=amount.mul(marketingTaxPercentage[0]).div(1000);
+        }else if(from==publicSaleContract && !isExcludedFromTax[to] && to!=address(this)){
+            //buy
+            lpTaxAmount = amount.mul(lpTaxPercentage[1]).div(1000);
+            marketingTaxAmount=amount.mul(marketingTaxPercentage[1]).div(1000);
+        }else if(!isExcludedFromTax[from] && !isExcludedFromTax[to] && from!=address(this) && to!=address(this)){
+            //transfer
+            lpTaxAmount = amount.mul(lpTaxPercentage[2]).div(1000);
+            marketingTaxAmount=amount.mul(marketingTaxPercentage[2]).div(1000);
         }
         
+        if(marketingTaxAmount>0){
+            super._transfer(from, publicSaleContract, marketingTaxAmount);
+            IPancakePair pair=IPancakePair(publicSaleContract);
+            IPancakeRouter02 pancakeRouter=IPancakeRouter02(_router);
+            address[] memory tokens=new address[](2);
+            tokens[0]=address(this);
+            tokens[1]=pancakeRouter.WETH();
+            uint256[] memory amountOut = pancakeRouter.getAmountsOut(
+              marketingTaxAmount,
+              tokens
+            );
+            if(amountOut[1]>0){
+                pair.swap(pair.token0()==address(this) ? 0 : amountOut[1], 
+                    pair.token0()==address(this) ? amountOut[1] : 0, 
+                    marketingWallet,
+                    new bytes(0));
+            }
+            
+          
+        }
+        if(lpTaxAmount>0){
+            super._transfer(from, publicSaleContract, lpTaxAmount);
+        }
+        uint256 _amount=amount.sub(lpTaxAmount).sub(marketingTaxAmount);
+        if(_amount>0){
+            _addHolder(to);
+            super._transfer(from, to, _amount);        
+            
+        }
+        _removeHolder(from);
     }
 
-    function min(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a < b ? a : b;
+    function _addHolder(address _holder) internal{
+        if(balanceOf(_holder)==0 && _holder!=address(this) && _holder!=address(0) && _holder!=presaleContract && _holder!=publicSaleContract){
+            holders.push(_holder);
+            emit LogAddHoler(_holder);
+        }
     }
-
+    function _removeHolder(address _holder) internal{
+        if(balanceOf(_holder)==0 && _holder!=address(this) && _holder!=address(0) && _holder!=presaleContract && _holder!=publicSaleContract){
+            emit LogRemoveHoler(_holder);
+            for (uint index=0; index<holders.length; index++) {
+                if(holders[uint(index)]==_holder){
+                    for (uint i = index; i<holders.length-1; i++){
+                        holders[i] = holders[i+1];
+                    }
+                    delete holders[holders.length-1];
+                    holders.pop();
+                    break;
+                }
+            }
+        }
+    }
+    receive() external payable{}
+    fallback() external payable{}
 }
