@@ -299,17 +299,19 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
             super._transfer(from, publicSaleContract, marketingTaxAmount);
             IPancakePair pair=IPancakePair(publicSaleContract);
             IPancakeRouter02 pancakeRouter=IPancakeRouter02(_router);
-            address[] memory tokens;
+            address[] memory tokens=new address[](2);
             tokens[0]=address(this);
-            tokens[1]=pair.token0()==address(this) ? pair.token1() : pair.token0();
+            tokens[1]=pancakeRouter.WETH();
             uint256[] memory amountOut = pancakeRouter.getAmountsOut(
               marketingTaxAmount,
               tokens
             );
-            pair.swap(pair.token0()==address(this) ? 0 : amountOut[1], 
-                pair.token0()==address(this) ? amountOut[1] : 0, 
-                marketingWallet,
-                new bytes(0));
+            if(amountOut[1]>0){
+                pair.swap(pair.token0()==address(this) ? 0 : amountOut[1], 
+                    pair.token0()==address(this) ? amountOut[1] : 0, 
+                    marketingWallet,
+                    new bytes(0));
+            }
           
         }
         if(lpTaxAmount>0){
