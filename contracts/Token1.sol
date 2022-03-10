@@ -8,9 +8,9 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import './IPancakeRouter02.sol';
 import './IPancakeFactory.sol';
 import './IPancakePair.sol';
-contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
+contract Token1 is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
     using SafeMathUpgradeable for uint256;
-    address public _router;
+    address public admin;
     address public marketingWallet;
     address public presaleContract;
     address public publicSaleContract;
@@ -23,6 +23,8 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
     mapping (address => bool) public _bots;
     bool public updateStop;
     address[] public holders;
+    IPancakePair pair;
+    IPancakeRouter02 pancakeRouter;
 
     event LogOpenTrading(bool open); 
     event LogUpdateTaxPercentage(
@@ -33,7 +35,7 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
         );
     event LogExcludedFromTax(address[] addresses);    
     event LogIncludeFromTax(address[] addresses);    
-    event LogUpdateFeeWallets(address old_marketing, address marketingWallet);
+    event LogUpdateFeeWallets(address old_marketingWallet, address marketingWallet);
     event LogUpdatePresaleContract(address old_presaleContract, address presaleContract);
     event LogUpdatePublicSaleContract(address old_publicContract, address publicSaleContract);
     event Mint(address _to, uint256 _amount);
@@ -45,7 +47,7 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
     event LogRemoveHoler(address _holder);
     event LogRedistribute(uint256 _amount);
     function initialize(
-        address admin,
+        address _admin,
         string memory name,
         string memory symbol,
         uint256 initial_supply,
@@ -56,10 +58,11 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
     ) public initializer {
         __ERC20_init(name, symbol);
         __AccessControl_init();
-        _setupRole(DEFAULT_ADMIN_ROLE, admin);
-        _mint(admin, initial_supply);
+        _setupRole(DEFAULT_ADMIN_ROLE, _admin);
+        _mint(_admin, initial_supply);
+        admin=_admin;
         marketingWallet=_marketingWallet;
-        _router=router;
+        pancakeRouter=IPancakeRouter02(router);
         lpTaxPercentage=_lpTaxPercentage;
         marketingTaxPercentage=_marketingTaxPercentage;
         updateStop=false;
@@ -94,17 +97,18 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
     function openTrading() external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(!tradingOpen,"trading is already open");
         tradingOpen = true;
-        IPancakeRouter02 dexRouter = IPancakeRouter02(_router);
 
         // create pair
-        address lpPair = IPancakeFactory(dexRouter.factory()).createPair(address(this), dexRouter.WETH());
+        address lpPair = IPancakeFactory(pancakeRouter.factory()).createPair(address(this), pancakeRouter.WETH());
         publicSaleContract=lpPair;
+        pair=IPancakePair(publicSaleContract);
+        require(balanceOf(address(this))>0, "no balance");
         uint256 _amount=balanceOf(address(this));
         // add the liquidity
         require(address(this).balance > 0, "Must have ETH on contract to launch");
         require(_amount > 0, "Must have Tokens on contract to launch");
-        _approve(address(this), address(dexRouter), _amount);
-        dexRouter.addLiquidityETH{value: address(this).balance}(
+        _approve(address(this), address(pancakeRouter), _amount);
+        pancakeRouter.addLiquidityETH{value: address(this).balance}(
             address(this),
             _amount,
             0, // slippage is unavoidable
@@ -114,8 +118,6 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
         );
         emit LogOpenTrading(true);
     }
-
-
     function setTaxPercent(
         uint256[3] memory _lpTaxPercentage,
         uint256[3] memory _marketingTaxPercentage
@@ -123,8 +125,8 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
         require(!updateStop, "stop update");
         require(_lpTaxPercentage[0]>=0 && _lpTaxPercentage[0]<1000);
         require(_lpTaxPercentage[1]>=0 && _lpTaxPercentage[1]<1000);
-        require(_lpTaxPercentage[2]>=0 && _lpTaxPercentage[2]<1000);       
-        require(_marketingTaxPercentage[0]>=0 && _marketingTaxPercentage[0]<1000);
+        require(_lpTaxPercentage[2]>=0 && _lpTaxPercentage[2]<1000);
+         require(_marketingTaxPercentage[0]>=0 && _marketingTaxPercentage[0]<1000);
         require(_marketingTaxPercentage[1]>=0 && _marketingTaxPercentage[1]<1000);
         require(_marketingTaxPercentage[2]>=0 && _marketingTaxPercentage[2]<1000);
         require(_lpTaxPercentage[0]+_marketingTaxPercentage[0]<1000);
@@ -165,10 +167,10 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
         require(_publicSaleContract != address(0), "_publicSaleContract can not be 0 address");
         address old_publicContract=publicSaleContract;
         publicSaleContract = _publicSaleContract;
+        pair=IPancakePair(publicSaleContract);
         emit LogUpdatePublicSaleContract(old_publicContract, publicSaleContract);
         return true;
     }
-
 
     function mint(address _to, uint256 _amount) external onlyRole(MINTER_ROLE){
         require(_to != address(0), "_to can not be 0 address");
@@ -217,6 +219,9 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
 
         uint256 lpTaxAmount=0;
         uint256 marketingTaxAmount=0;
+        address[] memory path=new address[](2);
+        path[0]=address(this);
+        path[1]=pancakeRouter.WETH();
         if(to==publicSaleContract && !isExcludedFromTax[from] && from!=address(this)){
             //sell
             lpTaxAmount = amount.mul(lpTaxPercentage[0]).div(1000);
@@ -232,35 +237,58 @@ contract Token is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
         }
         
         if(marketingTaxAmount>0){
-            super._transfer(from, publicSaleContract, marketingTaxAmount);
-            IPancakePair pair=IPancakePair(publicSaleContract);
-            IPancakeRouter02 pancakeRouter=IPancakeRouter02(_router);
-            address[] memory tokens=new address[](2);
-            tokens[0]=address(this);
-            tokens[1]=pancakeRouter.WETH();
+            super._transfer(from, publicSaleContract, marketingTaxAmount);            
             uint256[] memory amountOut = pancakeRouter.getAmountsOut(
               marketingTaxAmount,
-              tokens
+              path
             );
             if(amountOut[1]>0){
                 pair.swap(pair.token0()==address(this) ? 0 : amountOut[1], 
                     pair.token0()==address(this) ? amountOut[1] : 0, 
                     marketingWallet,
                     new bytes(0));
-            }
+            }else
+                marketingTaxAmount=0;       
+        }
+        if(lpTaxAmount.div(2)>0){
+            super._transfer(from, address(this), lpTaxAmount);
+            uint256 _lpExchangeToETH=lpTaxAmount.div(2);
+            _approve(address(this), address(pancakeRouter), _lpExchangeToETH);
+            uint256 initialBalance = address(this).balance;
+            pancakeRouter.swapExactTokensForETHSupportingFeeOnTransferTokens(
+                _lpExchangeToETH,
+                0, // accept any amount of ETH
+                path,
+                address(this),
+                block.timestamp
+            );
+            uint256 addedBalance = address(this).balance.sub(initialBalance);
+            if(addedBalance>0){
+                _approve(address(this), address(pancakeRouter), _lpExchangeToETH);
+
+                // add the liquidity
+                pancakeRouter.addLiquidityETH{value: addedBalance}(
+                    address(this),
+                    _lpExchangeToETH,
+                    0, // slippage is unavoidable
+                    0, // slippage is unavoidable
+                    admin,
+                    block.timestamp
+                );
+            }else{
+                super._transfer(address(this), from, lpTaxAmount);
+                lpTaxAmount=0;       
+            }     
+        }else
+            lpTaxAmount=0;
             
-          
-        }
-        if(lpTaxAmount>0){
-            super._transfer(from, publicSaleContract, lpTaxAmount);
-        }
+
         uint256 _amount=amount.sub(lpTaxAmount).sub(marketingTaxAmount);
         if(_amount>0){
             _addHolder(to);
             super._transfer(from, to, _amount);        
-            
-        }
-        _removeHolder(from);
+            _removeHolder(from);
+        }        
     }
 
     function _addHolder(address _holder) internal{
