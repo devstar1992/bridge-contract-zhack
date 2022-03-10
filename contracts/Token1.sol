@@ -73,7 +73,7 @@ contract Token1 is Initializable, ERC20Upgradeable, AccessControlUpgradeable  {
     }
 
     function stopUpdate() onlyRole(DEFAULT_ADMIN_ROLE) public{
-        require(updateStop==false, "stopped!");
+        require(!updateStop, "stopped!");
         updateStop=true;
         emit LogUpdateStopped(true);
     }
